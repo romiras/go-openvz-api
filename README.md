@@ -1,2 +1,2 @@
-# go-openvz-api-poc
-Go OpenVZ REST API - POC for management of OpenVZ
+# go-openvz-api
+Go OpenVZ REST API for management of OpenVZ
