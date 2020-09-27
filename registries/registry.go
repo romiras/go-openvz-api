@@ -16,7 +16,7 @@
 
 package registries
 
-import "../services"
+import "github.com/romiras/go-openvz-api/services"
 
 type Registry struct {
 	ContainerAPIService *services.ContainerAPIService

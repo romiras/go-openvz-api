@@ -16,7 +16,7 @@
 
 package api
 
-import "../models"
+import "github.com/romiras/go-openvz-api/models"
 
 type (
 	ApiResponse struct {

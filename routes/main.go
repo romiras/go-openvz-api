@@ -19,8 +19,8 @@ package routes
 import (
 	"log"
 
-	"../registries"
 	"github.com/gin-gonic/gin"
+	"github.com/romiras/go-openvz-api/registries"
 )
 
 var (

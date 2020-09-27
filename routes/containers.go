@@ -17,9 +17,9 @@
 package routes
 
 import (
-	"../handlers"
-	"../registries"
 	"github.com/gin-gonic/gin"
+	"github.com/romiras/go-openvz-api/handlers"
+	"github.com/romiras/go-openvz-api/registries"
 )
 
 func addContainerRoutes(reg *registries.Registry, grp *gin.RouterGroup) {

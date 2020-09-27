@@ -17,8 +17,8 @@
 package services
 
 import (
-	"../api"
-	"../models"
+	"github.com/romiras/go-openvz-api/api"
+	"github.com/romiras/go-openvz-api/models"
 )
 
 type ContainerAPIService struct {

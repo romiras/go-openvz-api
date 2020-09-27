@@ -17,8 +17,8 @@
 package main
 
 import (
-	"./registries"
-	"./routes"
+	"github.com/romiras/go-openvz-api/registries"
+	"github.com/romiras/go-openvz-api/routes"
 )
 
 func main() {

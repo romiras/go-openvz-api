@@ -19,9 +19,9 @@ package handlers
 import (
 	"net/http"
 
-	"../api"
-	"../registries"
 	"github.com/gin-gonic/gin"
+	"github.com/romiras/go-openvz-api/api"
+	"github.com/romiras/go-openvz-api/registries"
 )
 
 // ListContainers - List containers
