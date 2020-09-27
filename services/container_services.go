@@ -17,15 +17,36 @@
 package services
 
 import (
+	"log"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/romiras/go-openvz-api/api"
 	"github.com/romiras/go-openvz-api/models"
 )
 
-type ContainerAPIService struct {
+type (
+	DBConnection = *sqlx.DB
+
+	ContainerAPIService struct {
+		DB DBConnection
+	}
+)
+
+func InitializeDB() DBConnection {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	if err := db.Ping(); err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return db
 }
 
-func NewContainerAPIService() *ContainerAPIService {
-	return &ContainerAPIService{}
+func NewContainerAPIService(db DBConnection) *ContainerAPIService {
+	return &ContainerAPIService{
+		DB: db,
+	}
 }
 
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {

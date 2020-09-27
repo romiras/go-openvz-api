@@ -16,14 +16,19 @@
 
 package registries
 
-import "github.com/romiras/go-openvz-api/services"
+import (
+	"github.com/romiras/go-openvz-api/services"
+)
 
 type Registry struct {
 	ContainerAPIService *services.ContainerAPIService
+	DB                  services.DBConnection
 }
 
 func NewRegistry() *Registry {
+	db := services.InitializeDB()
 	return &Registry{
-		ContainerAPIService: services.NewContainerAPIService(),
+		ContainerAPIService: services.NewContainerAPIService(db),
+		DB:                  db,
 	}
 }

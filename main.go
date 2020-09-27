@@ -23,6 +23,7 @@ import (
 
 func main() {
 	registry := registries.NewRegistry()
+	defer registry.DB.Close()
 
 	// Our server will live in the routes package
 	routes.Run(registry)
