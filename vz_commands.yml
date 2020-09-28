@@ -1,0 +1,39 @@
+ct-create:
+  program: prlctl
+  arguments:
+  - create
+  - "{{name}}"
+  - "--vmtype ct"
+  - "--ostemplate {{ostemplate}}"
+  vars:
+  - name
+  - ostemplate
+ct-set:
+  program: prlctl
+  arguments:
+  - set
+  - "{{name}}"
+  - "--hostname {{hostname}}"
+  - "--cpus {{cpus}}"
+  - "--memsize {{memsize}}{{memsize_units}}"
+  - "--ipadd {{ipadd}}"
+  - "--size={{size}}{{size_units}}"
+  - "--nameserver {{nameserver}}"
+  - "--description {{description}}"
+  vars:
+  - name
+  - hostname
+  - cpus
+  - memsize
+  - memsize_units
+  - ipadd
+  - size
+  - size_units
+  - nameserver
+  - description
+ct-delete:
+  program: prlctl
+  - delete
+  - "{{name}}"
+  vars:
+  - name
