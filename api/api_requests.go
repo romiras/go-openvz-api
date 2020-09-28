@@ -18,6 +18,8 @@ package api
 
 import (
 	"errors"
+
+	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
 const MissingParamError = " is missing or empty"
@@ -28,19 +30,11 @@ type (
 		OSTemplate string `json:"ostemplate"`
 	}
 
-	ContainerParameters map[string]string
-	// - hostname
-	// - cpus
-	// - memsize
-	// - memsize_units
-	// - ipadd
-	// - size
-	// - size_units
-	// - nameserver
+	// ContainerParameters map[string]string
 
 	UpdateContainerRequest struct {
 		ID         string
-		Parameters ContainerParameters `json:"parameters"`
+		Parameters openvzcmd.Options `json:"parameters"`
 	}
 )
 

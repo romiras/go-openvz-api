@@ -27,13 +27,16 @@ import (
 
 	"github.com/romiras/go-openvz-api/api"
 	"github.com/romiras/go-openvz-api/models"
+
+	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
 type (
 	DBConnection = *sqlx.DB
 
 	ContainerAPIService struct {
-		DB DBConnection
+		DB        DBConnection
+		Commander *openvzcmd.POCCommanderStub
 	}
 )
 
@@ -53,8 +56,15 @@ func InitializeDB() DBConnection {
 }
 
 func NewContainerAPIService(db DBConnection) *ContainerAPIService {
+	cmd, err := openvzcmd.NewPOCCommanderStub("vz_commands.yml")
+	if err != nil {
+		log.Fatal(err.Error())
+		return nil
+	}
+
 	return &ContainerAPIService{
-		DB: db,
+		DB:        db,
+		Commander: cmd,
 	}
 }
 
@@ -65,6 +75,11 @@ func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddCo
 	if err != nil {
 		log.Fatal(err.Error())
 		return nil, err
+	}
+
+	err = srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	return &api.AddContainerResponse{
@@ -81,6 +96,11 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 	if err != nil {
 		log.Fatal(err.Error())
 		return nil, err
+	}
+
+	err = srv.Commander.SetContainerParameters(req.Parameters)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	statement, err := srv.DB.Prepare("UPDATE containers SET parameters=? WHERE id=?")
