@@ -33,6 +33,7 @@ ct-set:
   - description
 ct-delete:
   program: prlctl
+  arguments:
   - delete
   - "{{name}}"
   vars:
