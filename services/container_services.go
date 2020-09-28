@@ -71,15 +71,14 @@ func NewContainerAPIService(db DBConnection) *ContainerAPIService {
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {
 	id := uuid.New().String()
 
-	_, err := srv.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+	err := srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
 	if err != nil {
 		log.Fatal(err.Error())
-		return nil, err
 	}
 
-	err = srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
+	_, err = srv.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
 	if err != nil {
-		log.Fatal(err.Error())
+		return nil, err
 	}
 
 	return &api.AddContainerResponse{
@@ -98,7 +97,12 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 		return nil, err
 	}
 
-	err = srv.Commander.SetContainerParameters(req.Parameters)
+	container, err := srv.findContainer(req.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = srv.Commander.SetContainerParameters(container.Name, req.Parameters)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -122,7 +126,7 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 }
 
 func (srv *ContainerAPIService) findContainer(id string) (*models.Container, error) {
-	var container *models.Container
+	var container models.Container
 
 	err := srv.DB.Get(&container, "SELECT * FROM containers WHERE id=? LIMIT 1", id)
 	switch {
@@ -137,7 +141,7 @@ func (srv *ContainerAPIService) findContainer(id string) (*models.Container, err
 		log.Fatal(err)
 	}
 
-	return container, nil
+	return &container, nil
 }
 
 func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
