@@ -183,7 +183,12 @@ func (srv *ContainerAPIService) List() (*api.ListContainersResponse, error) {
 }
 
 func (srv *ContainerAPIService) Delete(id string) (*api.ApiResponse, error) {
-	err := srv.Commander.DeleteContainer(id)
+	container, err := srv.findContainer(id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = srv.Commander.DeleteContainer(container.Name)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
