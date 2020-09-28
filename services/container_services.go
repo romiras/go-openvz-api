@@ -121,8 +121,8 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 	}, nil
 }
 
-func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
-	var container models.Container
+func (srv *ContainerAPIService) findContainer(id string) (*models.Container, error) {
+	var container *models.Container
 
 	err := srv.DB.Get(&container, "SELECT * FROM containers WHERE id=? LIMIT 1", id)
 	switch {
@@ -137,12 +137,21 @@ func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdRespons
 		log.Fatal(err)
 	}
 
+	return container, nil
+}
+
+func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
+	container, err := srv.findContainer(id)
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.GetContainerByIdResponse{
 		ApiResponse: api.ApiResponse{
 			Code:    0,
 			Message: "success",
 		},
-		Container: &container,
+		Container: container,
 	}, nil
 }
 
@@ -170,5 +179,22 @@ func (srv *ContainerAPIService) List() (*api.ListContainersResponse, error) {
 			Message: "success",
 		},
 		Containers: containers,
+	}, nil
+}
+
+func (srv *ContainerAPIService) Delete(id string) (*api.ApiResponse, error) {
+	err := srv.Commander.DeleteContainer(id)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = srv.DB.Exec("DELETE FROM containers WHERE id=?", id)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return &api.ApiResponse{
+		Code:    0,
+		Message: "success",
 	}, nil
 }
