@@ -17,6 +17,8 @@
 package handlers
 
 import (
+	"database/sql"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -82,6 +84,10 @@ func GetContainerById(c *gin.Context, registry *registries.Registry) {
 
 	container, err := registry.ContainerAPIService.GetById(id)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			c.JSON(http.StatusNotFound, api.InvalidRequest(errors.New("no such container")))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
 		return
 	}

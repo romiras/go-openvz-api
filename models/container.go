@@ -16,8 +16,25 @@
 
 package models
 
+import (
+	"database/sql"
+	"encoding/json"
+	"time"
+)
+
 type Container struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	OSTemplate string `json:"ostemplate"`
+	ID             string            `json:"id" db:"id"`
+	Name           string            `json:"name" db:"name"`
+	OSTemplate     string            `json:"ostemplate" db:"os_template"`
+	Parameters     map[string]string `json:"parameters" db:"-"`
+	ParametersJSON sql.NullString    `db:"parameters"`
+	CreatedAt      time.Time         `json:"created_at" db:"created_at"`
+}
+
+func (c *Container) UnmarshalParametersDB() error {
+	if !c.ParametersJSON.Valid {
+		return nil
+	}
+
+	return json.Unmarshal([]byte(c.ParametersJSON.String), &c.Parameters)
 }

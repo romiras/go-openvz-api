@@ -32,11 +32,11 @@ type (
 
 	GetContainerByIdResponse struct {
 		ApiResponse
-		Container models.Container `json:"container"`
+		Container *models.Container `json:"container"`
 	}
 
 	ListContainersResponse struct {
 		ApiResponse
-		Containers []models.Container `json:"containers"`
+		Containers []*models.Container `json:"containers"`
 	}
 )
