@@ -27,13 +27,16 @@ import (
 
 	"github.com/romiras/go-openvz-api/api"
 	"github.com/romiras/go-openvz-api/models"
+
+	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
 type (
 	DBConnection = *sqlx.DB
 
 	ContainerAPIService struct {
-		DB DBConnection
+		DB        DBConnection
+		Commander *openvzcmd.POCCommanderStub
 	}
 )
 
@@ -53,17 +56,28 @@ func InitializeDB() DBConnection {
 }
 
 func NewContainerAPIService(db DBConnection) *ContainerAPIService {
+	cmd, err := openvzcmd.NewPOCCommanderStub("vz_commands.yml")
+	if err != nil {
+		log.Fatal(err.Error())
+		return nil
+	}
+
 	return &ContainerAPIService{
-		DB: db,
+		DB:        db,
+		Commander: cmd,
 	}
 }
 
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {
 	id := uuid.New().String()
 
-	_, err := srv.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+	err := srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
 	if err != nil {
 		log.Fatal(err.Error())
+	}
+
+	_, err = srv.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+	if err != nil {
 		return nil, err
 	}
 
@@ -81,6 +95,16 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 	if err != nil {
 		log.Fatal(err.Error())
 		return nil, err
+	}
+
+	container, err := srv.findContainer(req.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	err = srv.Commander.SetContainerParameters(container.Name, req.Parameters)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 
 	statement, err := srv.DB.Prepare("UPDATE containers SET parameters=? WHERE id=?")
@@ -101,7 +125,7 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 	}, nil
 }
 
-func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
+func (srv *ContainerAPIService) findContainer(id string) (*models.Container, error) {
 	var container models.Container
 
 	err := srv.DB.Get(&container, "SELECT * FROM containers WHERE id=? LIMIT 1", id)
@@ -117,12 +141,21 @@ func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdRespons
 		log.Fatal(err)
 	}
 
+	return &container, nil
+}
+
+func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
+	container, err := srv.findContainer(id)
+	if err != nil {
+		return nil, err
+	}
+
 	return &api.GetContainerByIdResponse{
 		ApiResponse: api.ApiResponse{
 			Code:    0,
 			Message: "success",
 		},
-		Container: &container,
+		Container: container,
 	}, nil
 }
 
@@ -150,5 +183,27 @@ func (srv *ContainerAPIService) List() (*api.ListContainersResponse, error) {
 			Message: "success",
 		},
 		Containers: containers,
+	}, nil
+}
+
+func (srv *ContainerAPIService) Delete(id string) (*api.ApiResponse, error) {
+	container, err := srv.findContainer(id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = srv.Commander.DeleteContainer(container.Name)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	_, err = srv.DB.Exec("DELETE FROM containers WHERE id=?", id)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return &api.ApiResponse{
+		Code:    0,
+		Message: "success",
 	}, nil
 }
