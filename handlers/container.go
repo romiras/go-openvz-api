@@ -55,6 +55,10 @@ func CreateContainer(c *gin.Context, registry *registries.Registry) {
 
 	container, err := registry.ContainerAPIService.Create(req)
 	if err != nil {
+		if err.Error() == "duplicate-name" {
+			c.JSON(http.StatusUnprocessableEntity, api.InvalidRequest(errors.New("A container with given name already exists")))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
 		return
 	}

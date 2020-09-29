@@ -19,6 +19,7 @@ package services
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 
 	"github.com/google/uuid"
@@ -31,6 +32,10 @@ import (
 	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
+const (
+	SQL_CREATE_CONTAINERS = "CREATE TABLE IF NOT EXISTS containers (id CHAR(36), name VARCHAR(255) NOT NULL, os_template VARCHAR(255) NOT NULL, parameters TEXT, created_at datetime default current_timestamp, CONSTRAINT rid_pkey PRIMARY KEY (id))"
+)
+
 type (
 	DBConnection = *sqlx.DB
 
@@ -40,16 +45,24 @@ type (
 	}
 )
 
+func createTables(db DBConnection) error {
+	_, err := db.Exec(SQL_CREATE_CONTAINERS)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func InitializeDB() DBConnection {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	if err := db.Ping(); err != nil {
 		log.Fatal(err.Error())
 	}
-	statement, _ := db.Prepare("CREATE TABLE IF NOT EXISTS containers (id CHAR(36), name VARCHAR(255) NOT NULL, os_template VARCHAR(255) NOT NULL, parameters TEXT, created_at datetime default current_timestamp, CONSTRAINT rid_pkey PRIMARY KEY (id))")
-	_, err := statement.Exec()
+
+	err := createTables(db)
 	if err != nil {
 		log.Fatal(err.Error())
-		return nil
 	}
 
 	return db
@@ -70,6 +83,10 @@ func NewContainerAPIService(db DBConnection) *ContainerAPIService {
 
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {
 	id := uuid.New().String()
+
+	if srv.hasContainerWithName(req.Name) {
+		return nil, errors.New("duplicate-name")
+	}
 
 	err := srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
 	if err != nil {
@@ -97,7 +114,7 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 		return nil, err
 	}
 
-	container, err := srv.findContainer(req.ID)
+	container, err := srv.findContainerByID(req.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +142,7 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 	}, nil
 }
 
-func (srv *ContainerAPIService) findContainer(id string) (*models.Container, error) {
+func (srv *ContainerAPIService) findContainerByID(id string) (*models.Container, error) {
 	var container models.Container
 
 	err := srv.DB.Get(&container, "SELECT * FROM containers WHERE id=? LIMIT 1", id)
@@ -144,8 +161,21 @@ func (srv *ContainerAPIService) findContainer(id string) (*models.Container, err
 	return &container, nil
 }
 
+func (srv *ContainerAPIService) hasContainerWithName(name string) bool {
+	var i int
+	err := srv.DB.DB.QueryRow("SELECT 1 FROM containers WHERE name=? LIMIT 1", name).Scan(&i)
+	switch {
+	case err == sql.ErrNoRows:
+		return false
+	case err != nil:
+		log.Fatal(err)
+	}
+
+	return true
+}
+
 func (srv *ContainerAPIService) GetById(id string) (*api.GetContainerByIdResponse, error) {
-	container, err := srv.findContainer(id)
+	container, err := srv.findContainerByID(id)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +217,7 @@ func (srv *ContainerAPIService) List() (*api.ListContainersResponse, error) {
 }
 
 func (srv *ContainerAPIService) Delete(id string) (*api.ApiResponse, error) {
-	container, err := srv.findContainer(id)
+	container, err := srv.findContainerByID(id)
 	if err != nil {
 		return nil, err
 	}
