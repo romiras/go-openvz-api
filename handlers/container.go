@@ -53,7 +53,7 @@ func CreateContainer(c *gin.Context, registry *registries.Registry) {
 		return
 	}
 
-	container, err := registry.ContainerAPIService.Create(req)
+	resp, err := registry.ContainerAPIService.Create(req)
 	if err != nil {
 		if err.Error() == "duplicate-name" {
 			c.JSON(http.StatusUnprocessableEntity, api.InvalidRequest(errors.New("A container with given name already exists")))
@@ -63,7 +63,7 @@ func CreateContainer(c *gin.Context, registry *registries.Registry) {
 		return
 	}
 
-	c.JSON(http.StatusOK, container)
+	c.JSON(http.StatusAccepted, resp)
 }
 
 // DeleteContainer - Deletes a container

@@ -27,7 +27,7 @@ type (
 
 	AddContainerResponse struct {
 		ApiResponse
-		ID string `json:"id,omitempty"`
+		JobID string `json:"job_id,omitempty"`
 	}
 
 	GetContainerByIdResponse struct {
