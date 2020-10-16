@@ -30,7 +30,7 @@ import (
 func ListContainers(c *gin.Context, registry *registries.Registry) {
 	containers, err := registry.ContainerAPIService.List()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
+		c.JSON(http.StatusInternalServerError, api.FailedRequest(err))
 		return
 	}
 
@@ -59,7 +59,7 @@ func CreateContainer(c *gin.Context, registry *registries.Registry) {
 			c.JSON(http.StatusUnprocessableEntity, api.InvalidRequest(errors.New("A container with given name already exists")))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
+		c.JSON(http.StatusInternalServerError, api.FailedRequest(err))
 		return
 	}
 
@@ -68,15 +68,18 @@ func CreateContainer(c *gin.Context, registry *registries.Registry) {
 
 // DeleteContainer - Deletes a container
 func DeleteContainer(c *gin.Context, registry *registries.Registry) {
-	_, err := handleFindByID(c)
+	id, err := handleFindByID(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, api.InvalidRequest(err))
 	}
 
-	c.JSON(http.StatusOK, api.ApiResponse{
-		Code:    0,
-		Message: "success",
-	})
+	resp, err := registry.ContainerAPIService.Delete(id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, api.FailedRequest(err))
+		return
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // GetContainerById - Find container by ID
@@ -92,7 +95,7 @@ func GetContainerById(c *gin.Context, registry *registries.Registry) {
 			c.JSON(http.StatusNotFound, api.InvalidRequest(errors.New("no such container")))
 			return
 		}
-		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
+		c.JSON(http.StatusInternalServerError, api.FailedRequest(err))
 		return
 	}
 
@@ -116,7 +119,7 @@ func UpdateContainer(c *gin.Context, registry *registries.Registry) {
 
 	resp, err := registry.ContainerAPIService.Update(req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, api.InvalidRequest(err))
+		c.JSON(http.StatusInternalServerError, api.FailedRequest(err))
 		return
 	}
 

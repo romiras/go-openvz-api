@@ -50,6 +50,14 @@ func InvalidRequest(err error) *ApiResponse {
 	}
 }
 
+func FailedRequest(err error) *ApiResponse {
+	return &ApiResponse{
+		Code:    200,
+		Message: err.Error(),
+		// Type: "",
+	}
+}
+
 func ValidateAddContainerRequest(req *AddContainerRequest) error {
 	if req.Name == "" {
 		return missingParam("name")
