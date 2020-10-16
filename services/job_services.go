@@ -21,6 +21,7 @@ import (
 	"log"
 
 	"github.com/romiras/go-openvz-api/api"
+	"github.com/romiras/go-openvz-api/models"
 	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
@@ -42,19 +43,27 @@ func (srv *JobAPIService) GetById(id string) (*api.GetJobByIdResponse, error) {
 		return nil, err
 	}
 
+	var entityType, entityID *string
+	if job.EntityType.Valid {
+		entityType = &job.EntityType.String
+	}
+	if job.EntityID.Valid {
+		entityID = &job.EntityID.String
+	}
+
 	return &api.GetJobByIdResponse{
 		ApiResponse: api.ApiResponse{
 			Code:    0,
 			Message: "success",
 		},
 		Status:     srv.getJobStatus(job.Status),
-		EntityType: job.EntityType,
-		EntityID:   job.EntityID,
+		EntityType: entityType,
+		EntityID:   entityID,
 	}, nil
 }
 
-func (srv *JobAPIService) findJobByID(id string) (*Job, error) {
-	var job Job
+func (srv *JobAPIService) findJobByID(id string) (*models.Job, error) {
+	var job models.Job
 
 	err := srv.DB.Get(&job, "SELECT id, type, status, entity_type, entity_id FROM jobs WHERE id=? LIMIT 1", id)
 	switch {
@@ -67,13 +76,13 @@ func (srv *JobAPIService) findJobByID(id string) (*Job, error) {
 	return &job, nil
 }
 
-func (srv *JobAPIService) getJobStatus(status JobStatus) string {
+func (srv *JobAPIService) getJobStatus(status models.JobStatus) string {
 	switch status {
-	case PENDING:
+	case models.PENDING:
 		return "pending"
-	case DONE:
+	case models.DONE:
 		return "done"
-	case FAILED:
+	case models.FAILED:
 		return "failed"
 	default:
 		return ""

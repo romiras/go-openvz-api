@@ -9,15 +9,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/romiras/go-openvz-api/api"
+	"github.com/romiras/go-openvz-api/models"
 	openvzcmd "github.com/romiras/go-openvz-cmd"
-)
-
-type JobStatus int
-
-const (
-	PENDING = iota
-	DONE
-	FAILED
 )
 
 const (
@@ -27,15 +20,6 @@ const (
 )
 
 type (
-	Job struct {
-		ID         string          `json:"id" db:"id"`
-		Type       string          `json:"type" db:"type"`
-		Status     JobStatus       `json:"status,omitempty" db:"status"`
-		Payload    json.RawMessage `json:"payload" db:"payload"`
-		EntityType string          `json:"entity_type,omitempty" db:"entity_type"`
-		EntityID   string          `json:"entity_id,omitempty" db:"entity_id"`
-	}
-
 	AddContainerJob struct {
 		Name       string `json:"name"`
 		OSTemplate string `json:"ostemplate"`
@@ -98,10 +82,10 @@ func (j *JobService) consumeJob() error {
 	return err
 }
 
-func (j *JobService) pickJob() *Job {
-	var job Job
+func (j *JobService) pickJob() *models.Job {
+	var job models.Job
 
-	err := j.DB.Get(&job, "SELECT id, payload, type FROM jobs WHERE status=? AND locked_at IS NULL ORDER BY created_at LIMIT 1", PENDING)
+	err := j.DB.Get(&job, "SELECT id, payload, type FROM jobs WHERE status=? AND locked_at IS NULL ORDER BY created_at LIMIT 1", models.PENDING)
 	switch {
 	case err == sql.ErrNoRows:
 		return nil
@@ -112,7 +96,7 @@ func (j *JobService) pickJob() *Job {
 	return &job
 }
 
-func (j *JobService) parseAddContainerRequest(job *Job) *api.AddContainerRequest {
+func (j *JobService) parseAddContainerRequest(job *models.Job) *api.AddContainerRequest {
 	var err error
 	var req *api.AddContainerRequest
 
@@ -134,10 +118,10 @@ func (j *JobService) lockJob(jobID string) error {
 
 func (j *JobService) updateJobStatus(jobID, id string, err error) error {
 	if err != nil {
-		_, err = j.DB.Exec("UPDATE jobs SET status=?, error_descr=?, locked_at=NULL WHERE id=?", FAILED, err.Error(), jobID)
+		_, err = j.DB.Exec("UPDATE jobs SET status=?, error_descr=?, locked_at=NULL WHERE id=?", models.FAILED, err.Error(), jobID)
 		return err
 	}
-	_, err = j.DB.Exec("UPDATE jobs SET status=?, locked_at=NULL, entity_type=?, entity_id=? WHERE id=?", DONE, ContainerType, id, jobID)
+	_, err = j.DB.Exec("UPDATE jobs SET status=?, locked_at=NULL, entity_type=?, entity_id=? WHERE id=?", models.DONE, ContainerType, id, jobID)
 
 	return err
 }

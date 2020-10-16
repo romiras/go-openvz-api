@@ -42,8 +42,8 @@ type (
 
 	GetJobByIdResponse struct {
 		ApiResponse
-		Status     string `json:"status"`
-		EntityType string `json:"entity_type,omitempty"`
-		EntityID   string `json:"entity_id,omitempty"`
+		Status     string  `json:"status"`
+		EntityType *string `json:"entity_type,omitempty"`
+		EntityID   *string `json:"entity_id,omitempty"`
 	}
 )

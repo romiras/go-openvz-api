@@ -62,7 +62,7 @@ func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddCo
 
 	jobID := uuid.New().String()
 
-	_, err = srv.DB.Exec("INSERT INTO jobs (id, status, payload, type) VALUES (?, ?, ?, ?)", jobID, PENDING, payload, AddContainerType)
+	_, err = srv.DB.Exec("INSERT INTO jobs (id, status, payload, type) VALUES (?, ?, ?, ?)", jobID, models.PENDING, payload, AddContainerType)
 	if err != nil {
 		return nil, err
 	}
