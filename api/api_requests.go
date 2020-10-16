@@ -69,6 +69,14 @@ func ValidateGetContainerByIdRequest(id string) error {
 	return nil
 }
 
+func ValidateGetJobByIdRequest(id string) error {
+	if id == "" {
+		return missingParam("id")
+	}
+
+	return nil
+}
+
 func ValidateUpdateContainerRequest(req *UpdateContainerRequest) error {
 	return nil
 }

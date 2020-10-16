@@ -39,4 +39,11 @@ type (
 		ApiResponse
 		Containers []*models.Container `json:"containers"`
 	}
+
+	GetJobByIdResponse struct {
+		ApiResponse
+		Status     string `json:"status"`
+		EntityType string `json:"entity_type,omitempty"`
+		EntityID   string `json:"entity_id,omitempty"`
+	}
 )

@@ -24,18 +24,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/romiras/go-openvz-api/api"
 	"github.com/romiras/go-openvz-api/models"
 
 	openvzcmd "github.com/romiras/go-openvz-cmd"
-)
-
-const (
-	PENDING = 0
-	DONE    = 1
-	FAILED  = 2
 )
 
 type (
@@ -55,8 +48,6 @@ func NewContainerAPIService(db DBConnection, cmd *openvzcmd.POCCommanderStub) *C
 }
 
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {
-	jobID := uuid.New().String()
-
 	if srv.hasContainerWithName(req.Name) {
 		return nil, errors.New("duplicate-name")
 	}
@@ -68,6 +59,8 @@ func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddCo
 	if err != nil {
 		log.Fatal(err.Error())
 	}
+
+	jobID := uuid.New().String()
 
 	_, err = srv.DB.Exec("INSERT INTO jobs (id, status, payload, type) VALUES (?, ?, ?, ?)", jobID, PENDING, payload, AddContainerType)
 	if err != nil {

@@ -3,6 +3,7 @@ package services
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
@@ -11,16 +12,28 @@ import (
 	openvzcmd "github.com/romiras/go-openvz-cmd"
 )
 
+type JobStatus int
+
+const (
+	PENDING = iota
+	DONE
+	FAILED
+)
+
 const (
 	JOB_CHECK_PERIOD = 3 * time.Second
 	AddContainerType = "add-container"
+	ContainerType    = "container"
 )
 
 type (
 	Job struct {
-		ID      string          `json:"id"`
-		Type    string          `json:"type"`
-		Payload json.RawMessage `json:"payload"`
+		ID         string          `json:"id" db:"id"`
+		Type       string          `json:"type" db:"type"`
+		Status     JobStatus       `json:"status,omitempty" db:"status"`
+		Payload    json.RawMessage `json:"payload" db:"payload"`
+		EntityType string          `json:"entity_type,omitempty" db:"entity_type"`
+		EntityID   string          `json:"entity_id,omitempty" db:"entity_id"`
 	}
 
 	AddContainerJob struct {
@@ -42,46 +55,47 @@ func NewJobService(db DBConnection, cmd *openvzcmd.POCCommanderStub) *JobService
 }
 
 func (j *JobService) ConsumeJobs() {
+	var err error
 	for {
-		j.consumeJob()
+		err = j.consumeJob()
+		if err != nil {
+			log.Println(err.Error()) // just log...
+		}
 		time.Sleep(JOB_CHECK_PERIOD)
 	}
 }
 
-func (j *JobService) consumeJob() {
+func (j *JobService) consumeJob() error {
 	var err error
 
 	job := j.pickJob()
 	if job == nil {
 		log.Printf("No jobs.")
-		return
+		return nil
 	}
 
 	err = j.lockJob(job.ID)
 	if err != nil {
-		log.Println(err.Error())
-		return
+		return err
 	}
 
 	req := j.parseAddContainerRequest(job)
 	if req == nil {
-		log.Println("CANNOT be parsed - skipped!")
-		return
-	}
-
-	err = j.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
-
-	err = j.updateJobStatus(job.ID, err)
-	if err != nil {
-		log.Println(err.Error())
+		return errors.New("CANNOT be parsed - skipped!")
 	}
 
 	id := uuid.New().String() // UUID of container
 
-	_, err = j.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+	err = j.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
+
+	err = j.updateJobStatus(job.ID, id, err)
 	if err != nil {
-		log.Println(err.Error())
+		return err
 	}
+
+	_, err = j.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+
+	return err
 }
 
 func (j *JobService) pickJob() *Job {
@@ -118,12 +132,12 @@ func (j *JobService) lockJob(jobID string) error {
 	return err
 }
 
-func (j *JobService) updateJobStatus(jobID string, err error) error {
+func (j *JobService) updateJobStatus(jobID, id string, err error) error {
 	if err != nil {
 		_, err = j.DB.Exec("UPDATE jobs SET status=?, error_descr=?, locked_at=NULL WHERE id=?", FAILED, err.Error(), jobID)
 		return err
 	}
-	_, err = j.DB.Exec("UPDATE jobs SET status=?, locked_at=NULL WHERE id=?", DONE, jobID)
+	_, err = j.DB.Exec("UPDATE jobs SET status=?, locked_at=NULL, entity_type=?, entity_id=? WHERE id=?", DONE, ContainerType, id, jobID)
 
 	return err
 }
