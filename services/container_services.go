@@ -24,16 +24,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/romiras/go-openvz-api/api"
 	"github.com/romiras/go-openvz-api/models"
 
 	openvzcmd "github.com/romiras/go-openvz-cmd"
-)
-
-const (
-	SQL_CREATE_CONTAINERS = "CREATE TABLE IF NOT EXISTS containers (id CHAR(36), name VARCHAR(255) NOT NULL, os_template VARCHAR(255) NOT NULL, parameters TEXT, created_at datetime default current_timestamp, CONSTRAINT rid_pkey PRIMARY KEY (id))"
 )
 
 type (
@@ -45,36 +40,7 @@ type (
 	}
 )
 
-func createTables(db DBConnection) error {
-	_, err := db.Exec(SQL_CREATE_CONTAINERS)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func InitializeDB() DBConnection {
-	db := sqlx.MustConnect("sqlite3", ":memory:")
-	if err := db.Ping(); err != nil {
-		log.Fatal(err.Error())
-	}
-
-	err := createTables(db)
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-
-	return db
-}
-
-func NewContainerAPIService(db DBConnection) *ContainerAPIService {
-	cmd, err := openvzcmd.NewPOCCommanderStub("vz_commands.yml")
-	if err != nil {
-		log.Fatal(err.Error())
-		return nil
-	}
-
+func NewContainerAPIService(db DBConnection, cmd *openvzcmd.POCCommanderStub) *ContainerAPIService {
 	return &ContainerAPIService{
 		DB:        db,
 		Commander: cmd,
@@ -82,18 +48,21 @@ func NewContainerAPIService(db DBConnection) *ContainerAPIService {
 }
 
 func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddContainerResponse, error) {
-	id := uuid.New().String()
-
 	if srv.hasContainerWithName(req.Name) {
 		return nil, errors.New("duplicate-name")
 	}
 
-	err := srv.Commander.CreateContainer(req.Name, req.OSTemplate, nil)
+	payload, err := json.Marshal(AddContainerJob{
+		Name:       req.Name,
+		OSTemplate: req.OSTemplate,
+	})
 	if err != nil {
 		log.Fatal(err.Error())
 	}
 
-	_, err = srv.DB.Exec("INSERT INTO containers (id, name, os_template) VALUES (?, ?, ?)", id, req.Name, req.OSTemplate)
+	jobID := uuid.New().String()
+
+	_, err = srv.DB.Exec("INSERT INTO jobs (id, status, payload, type) VALUES (?, ?, ?, ?)", jobID, models.PENDING, payload, AddContainerType)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +72,7 @@ func (srv *ContainerAPIService) Create(req *api.AddContainerRequest) (*api.AddCo
 			Code:    0,
 			Message: "success",
 		},
-		ID: id,
+		JobID: jobID,
 	}, nil
 }
 

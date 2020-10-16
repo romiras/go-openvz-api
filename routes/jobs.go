@@ -17,33 +17,13 @@
 package routes
 
 import (
-	"log"
-
 	"github.com/gin-gonic/gin"
+	"github.com/romiras/go-openvz-api/handlers"
 	"github.com/romiras/go-openvz-api/registries"
 )
 
-var (
-	router = gin.Default()
-)
+func addJobRoutes(reg *registries.Registry, grp *gin.RouterGroup) {
+	containers := grp.Group("/jobs")
 
-// Run will start the server
-func Run(reg *registries.Registry) {
-	getRoutes(reg)
-	log.Fatal(router.Run(":5000"))
-}
-
-// getRoutes will create our routes of our entire application
-// this way every group of routes can be defined in their own file
-// so this one won't be so messy
-func getRoutes(reg *registries.Registry) {
-	v1 := router.Group("/v0.1")
-	addContainerRoutes(reg, v1)
-	addJobRoutes(reg, v1)
-}
-
-func withRegistry(handler func(*gin.Context, *registries.Registry), registry *registries.Registry) func(*gin.Context) {
-	return func(ctx *gin.Context) {
-		handler(ctx, registry)
-	}
+	containers.GET("/:id", withRegistry(handlers.GetJobById, reg))
 }

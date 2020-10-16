@@ -25,6 +25,9 @@ func main() {
 	registry := registries.NewRegistry()
 	defer registry.DB.Close()
 
+	// Run a job service in background.
+	go registry.JobService.ConsumeJobs()
+
 	// Our server will live in the routes package
 	routes.Run(registry)
 }

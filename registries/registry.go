@@ -17,18 +17,74 @@
 package registries
 
 import (
+	"log"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/romiras/go-openvz-api/services"
+	openvzcmd "github.com/romiras/go-openvz-cmd"
+)
+
+const (
+	SQL_CREATE_CONTAINERS = "CREATE TABLE IF NOT EXISTS containers (id CHAR(36) NOT NULL, name VARCHAR(255) NOT NULL, os_template VARCHAR(255) NOT NULL, parameters TEXT, created_at datetime default current_timestamp, CONSTRAINT rid_pkey PRIMARY KEY (id))"
+	SQL_CREATE_JOBS       = "CREATE TABLE jobs (id uuid NOT NULL, type VARCHAR(255) NOT NULL, payload text NOT NULL, status integer NOT NULL, entity_type integer, entity_id integer, created_at timestamp NOT NULL default current_timestamp, locked_at timestamp, error_descr varchar(255), CONSTRAINT rid_pkey PRIMARY KEY (id))"
+	SQL_CREATE_JOBS_INDEX = "CREATE INDEX jobs_status_locked_at_created_at_index ON jobs (status, locked_at, created_at)"
 )
 
 type Registry struct {
 	ContainerAPIService *services.ContainerAPIService
+	JobAPIService       *services.JobAPIService
+	JobService          *services.JobService
 	DB                  services.DBConnection
+	Commander           *openvzcmd.POCCommanderStub
 }
 
 func NewRegistry() *Registry {
-	db := services.InitializeDB()
-	return &Registry{
-		ContainerAPIService: services.NewContainerAPIService(db),
-		DB:                  db,
+	db := InitializeDB()
+
+	cmd, err := openvzcmd.NewPOCCommanderStub("vz_commands.yml")
+	if err != nil {
+		log.Fatal(err.Error())
 	}
+
+	return &Registry{
+		ContainerAPIService: services.NewContainerAPIService(db, cmd),
+		JobAPIService:       services.NewJobAPIService(db, cmd),
+		JobService:          services.NewJobService(db, cmd),
+		DB:                  db,
+		Commander:           cmd,
+	}
+}
+
+func createTables(db services.DBConnection) error {
+	_, err := db.Exec(SQL_CREATE_CONTAINERS)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(SQL_CREATE_JOBS)
+	if err != nil {
+		return err
+	}
+
+	_, err = db.Exec(SQL_CREATE_JOBS_INDEX)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func InitializeDB() services.DBConnection {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	if err := db.Ping(); err != nil {
+		log.Fatal(err.Error())
+	}
+
+	err := createTables(db)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	return db
 }

@@ -8,5 +8,6 @@ require (
 	github.com/jmoiron/sqlx v1.2.0
 	github.com/mattn/go-sqlite3 v1.14.4
 	github.com/romiras/go-openvz-cmd v0.0.0-20200929102312-455940cf8ff9
-	google.golang.org/appengine v1.6.6 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
+	gopkg.in/yaml.v2 v2.3.0
 )
