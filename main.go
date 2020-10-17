@@ -17,12 +17,17 @@
 package main
 
 import (
+	"flag"
+
 	"github.com/romiras/go-openvz-api/registries"
 	"github.com/romiras/go-openvz-api/routes"
 )
 
 func main() {
-	registry := registries.NewRegistry()
+	dsn := flag.String("dsn", ":memory:", "Data source name.")
+	flag.Parse()
+
+	registry := registries.NewRegistry(dsn)
 	defer registry.DB.Close()
 
 	// Run a job service in background.

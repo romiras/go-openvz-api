@@ -39,8 +39,8 @@ type Registry struct {
 	Commander           *openvzcmd.POCCommanderStub
 }
 
-func NewRegistry() *Registry {
-	db := InitializeDB()
+func NewRegistry(dsn *string) *Registry {
+	db := InitializeDB("sqlite3", *dsn)
 
 	cmd, err := openvzcmd.NewPOCCommanderStub("vz_commands.yml")
 	if err != nil {
@@ -75,8 +75,8 @@ func createTables(db services.DBConnection) error {
 	return nil
 }
 
-func InitializeDB() services.DBConnection {
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+func InitializeDB(driver, dsn string) services.DBConnection {
+	db := sqlx.MustConnect(driver, dsn)
 	if err := db.Ping(); err != nil {
 		log.Fatal(err.Error())
 	}
