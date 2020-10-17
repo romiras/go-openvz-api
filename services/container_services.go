@@ -90,19 +90,17 @@ func (srv *ContainerAPIService) Update(req *api.UpdateContainerRequest) (*api.Ap
 
 	err = srv.Commander.SetContainerParameters(container.Name, req.Parameters)
 	if err != nil {
-		log.Fatal(err.Error())
+		return nil, err
 	}
 
 	statement, err := srv.DB.Prepare("UPDATE containers SET parameters=? WHERE id=?")
 	if err != nil {
 		log.Fatal(err.Error())
-		return nil, err
 	}
 
 	_, err = statement.Exec(jsonData, req.ID)
 	if err != nil {
 		log.Fatal(err.Error())
-		return nil, err
 	}
 
 	return &api.ApiResponse{
@@ -193,7 +191,7 @@ func (srv *ContainerAPIService) Delete(id string) (*api.ApiResponse, error) {
 
 	err = srv.Commander.DeleteContainer(container.Name)
 	if err != nil {
-		log.Fatal(err.Error())
+		return nil, err
 	}
 
 	_, err = srv.DB.Exec("DELETE FROM containers WHERE id=?", id)
