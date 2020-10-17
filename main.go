@@ -18,20 +18,24 @@ package main
 
 import (
 	"flag"
+	"time"
 
 	"github.com/romiras/go-openvz-api/registries"
 	"github.com/romiras/go-openvz-api/routes"
 )
 
+const DefaultJobInterval = 3 // in seconds
+
 func main() {
 	dsn := flag.String("dsn", ":memory:", "Data source name.")
+	jobInterval := flag.Int64("jobinterval", DefaultJobInterval, "Job check interval")
 	flag.Parse()
 
 	registry := registries.NewRegistry(dsn)
 	defer registry.DB.Close()
 
 	// Run a job service in background.
-	go registry.JobService.ConsumeJobs()
+	go registry.JobService.ConsumeJobs(time.Duration(*jobInterval) * time.Second)
 
 	// Our server will live in the routes package
 	routes.Run(registry)

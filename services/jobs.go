@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	JOB_CHECK_PERIOD = 3 * time.Second
 	AddContainerType = "add-container"
 	ContainerType    = "container"
 )
@@ -38,14 +37,14 @@ func NewJobService(db DBConnection, cmd *openvzcmd.POCCommanderStub) *JobService
 	}
 }
 
-func (j *JobService) ConsumeJobs() {
+func (j *JobService) ConsumeJobs(jobInterval time.Duration) {
 	var err error
 	for {
 		err = j.consumeJob()
 		if err != nil {
 			log.Println(err.Error()) // just log...
 		}
-		time.Sleep(JOB_CHECK_PERIOD)
+		time.Sleep(jobInterval)
 	}
 }
 
